@@ -88,9 +88,9 @@ class ScalePropertyGenerator extends PropertyGeneratorImpl {
             }
             ROI srcROI = (ROI)property;
             
-            if (! (src instanceof RenderedOp)) {
-            	return srcROI;
-            }
+            //if (! (src instanceof RenderedOp)) {
+            	//return srcROI;
+            //}
             
             // Retrieve the Interpolation object.
             Interpolation interp = (Interpolation)pb.getObjectParameter(4);
