@@ -8,4 +8,4 @@ descriptor  it.geosolutions.jaiext.border.BorderDescriptor
 # RenderedImageFactories
 #
 
-rendered  it.geosolutions.jaiext.border.BorderRIF  it.geosolutions.jaiext  Border Border 
+rendered  it.geosolutions.jaiext.border.BorderRIF  it.geosolutions.jaiext  border border 
