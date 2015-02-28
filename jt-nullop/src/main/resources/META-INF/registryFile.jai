@@ -8,4 +8,4 @@ descriptor  it.geosolutions.jaiext.nullop.NullDescriptor
 # RenderedImageFactories
 #
 
-rendered  it.geosolutions.jaiext.nullop.NullCRIF  it.geosolutions.jaiext  Null Null 
+rendered  it.geosolutions.jaiext.nullop.NullCRIF  it.geosolutions.jaiext  null null 

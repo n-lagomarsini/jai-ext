@@ -33,6 +33,7 @@ import java.util.logging.Logger;
 import javax.media.jai.JAI;
 import javax.media.jai.OperationDescriptor;
 import javax.media.jai.OperationRegistry;
+import javax.media.jai.RegistryElementDescriptor;
 import javax.media.jai.registry.RenderedRegistryMode;
 
 /**
@@ -58,10 +59,9 @@ public class JAIExt {
     private static final String JAI_EXT_VENDOR = "it.geosolutions.jaiext";
 
     /** Initialization of the {@link JAIExt} instance */
-    public synchronized static void initJAIEXT(ConcurrentOperationRegistry registry) {
+    public synchronized static void initJAIEXT() {
         if (jaiext == null) {
-            jaiext = new JAIExt(registry);
-            JAI.getDefaultInstance().setOperationRegistry(registry);
+            jaiext = getJAIEXT();
         }
     }
 
@@ -73,6 +73,69 @@ public class JAIExt {
             JAI.getDefaultInstance().setOperationRegistry(initializeRegistry);
         }
         return jaiext;
+    }
+    
+    public synchronized static void registerAllOperations(boolean jaiextOperations) {
+        JAIExt je = getJAIEXT();
+        
+        if(jaiextOperations){
+            List<OperationItem> jaiextOps = je.getJAIEXTOperations();
+            for(OperationItem item : jaiextOps){
+                String itemName = item.getName();
+                String jaiExtName = getOperationName(itemName);
+                if(itemName != jaiExtName){
+                    OperationItem itemJE = je.getRegistry().getOperationCollection().get(jaiExtName);
+                    if(itemJE == null){
+                        itemJE = searchForOperation(jaiExtName, true);
+                        je.registerOperation(itemJE);
+                    }
+                }else{
+                    je.registerJAIEXTDescriptor(itemName);
+                }
+            }
+        } else{
+            List<OperationItem> jaiOps = je.getJAIOperations();
+            for(OperationItem item : jaiOps){
+                String itemName = item.getName();
+                String jaiExtName = getJAIExtName(itemName);
+                if(itemName != jaiExtName){
+                    OperationItem itemJE = je.getRegistry().getOperationCollection().get(jaiExtName);
+                    if(itemJE != null){
+                        je.unregisterOperation(itemJE);
+                    }
+                }else{
+                    je.registerJAIDescriptor(itemName);
+                }
+            }
+        }
+    }
+    
+    private static OperationItem searchForOperation(String jaiExtName, boolean jaiext) {
+        JAIExt je = getJAIEXT();
+        List<OperationItem> operations = jaiext ? je.getJAIEXTOperations() : je.getJAIAvailableOps();
+        for(OperationItem it : operations){
+            if(it.getName().equalsIgnoreCase(jaiExtName)){
+                return it;
+            }
+        }
+        return null;
+    }
+
+    public synchronized static void registerOperations(Set<String> operations, boolean jaiext) {
+        JAIExt je = getJAIEXT();
+        for (String opName : operations) {
+            String jaiextName = getJAIExtName(opName);
+            if (jaiext) {
+                if (!isJAIExtOperation(jaiextName)) {
+                    je.registerJAIEXTDescriptor(jaiextName);
+                }
+            } else if (jaiextName.equalsIgnoreCase(opName) && isJAIExtOperation(opName)) {
+                je.registerJAIDescriptor(opName);
+            } else if(!jaiextName.equalsIgnoreCase(opName)){
+                OperationItem it = je.searchForOperation(jaiextName, true);
+                je.unregisterOperation(it);
+            }
+        }
     }
     
     /**
@@ -122,12 +185,70 @@ public class JAIExt {
     }
 
     /**
+     * Get a List of the available JAI operations
+     * 
+     * @return
+     */
+    public static List<OperationItem> getJAIOperations() {
+        return getJAIEXT().getJAIAvailableOps();
+    }
+    
+    /**
      * Returns the current {@link ConcurrentOperationRegistry} used.
      * 
      * @return
      */
     public static ConcurrentOperationRegistry getRegistry() {
         return getJAIEXT().registry;
+    }
+    
+    /**
+     * Utility method for substituting the JAI operation names with the JAI-EXT ones, if they are present
+     * 
+     * @param name
+     * @return
+     */
+    public static String getOperationName(String name) {
+        if (isJAIExtOperation("Stats")
+                && (name.equalsIgnoreCase("Extrema") || name.equalsIgnoreCase("Histogram"))) {
+            return "Stats";
+        } else if (isJAIExtOperation("algebric")
+                && (name.equalsIgnoreCase("Add") || name.equalsIgnoreCase("Exp")
+                        || name.equalsIgnoreCase("Invert") || name.equalsIgnoreCase("Log") || name
+                            .equalsIgnoreCase("Multiply"))) {
+            return "algebric";
+        } else if (isJAIExtOperation("operationConst")
+                && (name.equalsIgnoreCase("AddConst") || name.equalsIgnoreCase("DivideByConst")
+                        || name.equalsIgnoreCase("MultiplyConst")
+                        || name.equalsIgnoreCase("SubtractConst") || name
+                            .equalsIgnoreCase("SubtractFromConst"))) {
+            return "operationConst";
+        }
+
+        return name;
+    }
+    
+    /**
+     * Utility method for substituting the JAI operation names with the JAI-EXT ones
+     * 
+     * @param name
+     * @return
+     */
+    public static String getJAIExtName(String name) {
+        if ((name.equalsIgnoreCase("Extrema") || name.equalsIgnoreCase("Histogram"))) {
+            return "Stats";
+        } else if ((name.equalsIgnoreCase("Add") || name.equalsIgnoreCase("Exp")
+                        || name.equalsIgnoreCase("Invert") || name.equalsIgnoreCase("Log") || name
+                            .equalsIgnoreCase("Multiply"))) {
+            return "algebric";
+        } else if ((name.equalsIgnoreCase("AddConst") || name.equalsIgnoreCase("DivideByConst")
+                        || name.equalsIgnoreCase("MultiplyConst")
+                        || name.equalsIgnoreCase("SubtractConst") || name
+                            .equalsIgnoreCase("SubtractFromConst"))) {
+            return "operationConst";
+        }
+
+        return name;
     }
     
     /**
@@ -325,7 +446,27 @@ public class JAIExt {
         }
     }
     
-
+    /**
+     * Returns a List of the operations currently registered which are present in the JAI-EXT API:
+     * 
+     * @return
+     */
+    private List<OperationItem> getJAIAvailableOps() {
+        Lock writeLock = lock.writeLock();
+        try {
+            writeLock.lock();
+            OperationCollection items = registry.getOperationCollection();
+            Set<String> jaiKeys = registry.getOperationMap(true).keySet();
+            List<OperationItem> ops = new ArrayList<OperationItem>(jaiKeys.size());
+            for (String key : jaiKeys) {
+                ops.add(items.get(key));
+            }
+            return ops;
+        } finally {
+            writeLock.unlock();
+        }
+    }
+    
     private boolean isJAIExtOp(String descriptorName) {
         Lock readLock = lock.readLock();
         try {
@@ -339,5 +480,25 @@ public class JAIExt {
         } finally {
             readLock.unlock();
         }
+    }
+    
+    private void unregisterOperation(OperationItem op) {
+        if(op == null){
+            return;
+        }
+        Object factory = op.getFactory();
+        OperationDescriptor descriptor = op.getDescriptor();
+        registry.unregisterFactory(RenderedRegistryMode.MODE_NAME, op.getName(), op.getVendor(), factory);
+        registry.unregisterDescriptor(descriptor);
+    }
+    
+    private void registerOperation(OperationItem op) {
+        if(op == null){
+            return;
+        }
+        Object factory = op.getFactory();
+        OperationDescriptor descriptor = op.getDescriptor();
+        registry.registerDescriptor(descriptor);
+        registry.registerFactory(RenderedRegistryMode.MODE_NAME, op.getName(), op.getVendor(), factory);
     }
 }
