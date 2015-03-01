@@ -8,4 +8,4 @@ descriptor  it.geosolutions.jaiext.warp.WarpDescriptor
 # RenderedImageFactories
 #
 
-rendered  it.geosolutions.jaiext.warp.WarpRIF  it.geosolutions.jaiext  warp warp 
+rendered  it.geosolutions.jaiext.warp.WarpRIF  it.geosolutions.jaiext  Warp Warp 

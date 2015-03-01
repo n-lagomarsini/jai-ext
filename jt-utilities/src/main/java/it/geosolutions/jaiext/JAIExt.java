@@ -304,8 +304,8 @@ public class JAIExt {
                 // Unregistering of the old operation and registering of the new one
                 if (newItem != null) {
                     if (oldItem.getCurrentFactory() != null) {
-                        registry.unregisterFactory(RenderedRegistryMode.MODE_NAME, descriptorName,
-                                vendor, oldItem.getCurrentFactory());
+                        //registry.unregisterFactory(RenderedRegistryMode.MODE_NAME, descriptorName,
+                                //vendor, oldItem.getCurrentFactory());
                         if (LOGGER.isLoggable(Level.FINEST)) {
                             LOGGER.log(Level.FINEST, "Unregistered Factory for the operation: "
                                     + descriptorName);
@@ -324,9 +324,10 @@ public class JAIExt {
                                 + " descriptor for the operation: " + descriptorName);
                     }
 
-                    if (newItem.getCurrentFactory() != null) {
+                    Object newFactory = newItem.getCurrentFactory();
+					if (newFactory != null && registry.getFactory(RenderedRegistryMode.MODE_NAME, newItem.getDescriptor().getName()) == null) {
                         registry.registerFactory(RenderedRegistryMode.MODE_NAME, descriptorName,
-                                newItem.getVendor(), newItem.getCurrentFactory());
+                                newItem.getVendor(), newFactory);
                         if (LOGGER.isLoggable(Level.FINEST)) {
                             LOGGER.log(Level.FINEST, "Registered Factory for the operation: "
                                     + descriptorName);

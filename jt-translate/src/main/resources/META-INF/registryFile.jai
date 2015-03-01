@@ -8,4 +8,4 @@ descriptor  it.geosolutions.jaiext.translate.TranslateDescriptor
 # RenderedImageFactories
 #
 
-rendered  it.geosolutions.jaiext.translate.TranslateCRIF  it.geosolutions.jaiext  translate translate 
+rendered  it.geosolutions.jaiext.translate.TranslateCRIF  it.geosolutions.jaiext  Translate Translate 

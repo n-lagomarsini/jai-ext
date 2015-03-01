@@ -8,4 +8,4 @@ descriptor  it.geosolutions.jaiext.bandcombine.BandCombineDescriptor
 # RenderedImageFactories
 #
 
-rendered  it.geosolutions.jaiext.bandcombine.BandCombineCRIF  it.geosolutions.jaiext  bandcombine bandcombine 
+rendered  it.geosolutions.jaiext.bandcombine.BandCombineCRIF  it.geosolutions.jaiext  BandCombine BandCombine 
