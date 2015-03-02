@@ -23,6 +23,7 @@ import it.geosolutions.jaiext.ConcurrentOperationRegistry.OperationItem;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -33,7 +34,6 @@ import java.util.logging.Logger;
 import javax.media.jai.JAI;
 import javax.media.jai.OperationDescriptor;
 import javax.media.jai.OperationRegistry;
-import javax.media.jai.RegistryElementDescriptor;
 import javax.media.jai.registry.RenderedRegistryMode;
 
 /**
@@ -75,36 +75,36 @@ public class JAIExt {
         return jaiext;
     }
     
-    public synchronized static void registerAllOperations(boolean jaiextOperations) {
+    public static void registerAllOperations(boolean jaiextOperations) {
         JAIExt je = getJAIEXT();
         
         if(jaiextOperations){
-            List<OperationItem> jaiextOps = je.getJAIEXTOperations();
+            List<OperationItem> jaiextOps = getJAIEXTOperations();
             for(OperationItem item : jaiextOps){
                 String itemName = item.getName();
                 String jaiExtName = getOperationName(itemName);
                 if(itemName != jaiExtName){
-                    OperationItem itemJE = je.getRegistry().getOperationCollection().get(jaiExtName);
+                    OperationItem itemJE = getRegistry().getOperationCollection().get(jaiExtName);
                     if(itemJE == null){
                         itemJE = searchForOperation(jaiExtName, true);
                         je.registerOperation(itemJE);
                     }
                 }else{
-                    je.registerJAIEXTDescriptor(itemName);
+                    registerJAIEXTDescriptor(itemName);
                 }
             }
         } else{
-            List<OperationItem> jaiOps = je.getJAIOperations();
+            List<OperationItem> jaiOps = getJAIOperations();
             for(OperationItem item : jaiOps){
                 String itemName = item.getName();
                 String jaiExtName = getJAIExtName(itemName);
                 if(itemName != jaiExtName){
-                    OperationItem itemJE = je.getRegistry().getOperationCollection().get(jaiExtName);
+                    OperationItem itemJE = getRegistry().getOperationCollection().get(jaiExtName);
                     if(itemJE != null){
                         je.unregisterOperation(itemJE);
                     }
                 }else{
-                    je.registerJAIDescriptor(itemName);
+                    registerJAIDescriptor(itemName);
                 }
             }
         }
@@ -112,7 +112,7 @@ public class JAIExt {
     
     private static OperationItem searchForOperation(String jaiExtName, boolean jaiext) {
         JAIExt je = getJAIEXT();
-        List<OperationItem> operations = jaiext ? je.getJAIEXTOperations() : je.getJAIAvailableOps();
+        List<OperationItem> operations = jaiext ? getJAIEXTOperations() : je.getJAIAvailableOps();
         for(OperationItem it : operations){
             if(it.getName().equalsIgnoreCase(jaiExtName)){
                 return it;
@@ -121,18 +121,18 @@ public class JAIExt {
         return null;
     }
 
-    public synchronized static void registerOperations(Set<String> operations, boolean jaiext) {
+    public static void registerOperations(Set<String> operations, boolean jaiext) {
         JAIExt je = getJAIEXT();
         for (String opName : operations) {
             String jaiextName = getJAIExtName(opName);
             if (jaiext) {
                 if (!isJAIExtOperation(jaiextName)) {
-                    je.registerJAIEXTDescriptor(jaiextName);
+                    registerJAIEXTDescriptor(jaiextName);
                 }
             } else if (jaiextName.equalsIgnoreCase(opName) && isJAIExtOperation(opName)) {
-                je.registerJAIDescriptor(opName);
+                registerJAIDescriptor(opName);
             } else if(!jaiextName.equalsIgnoreCase(opName)){
-                OperationItem it = je.searchForOperation(jaiextName, true);
+                OperationItem it = searchForOperation(jaiextName, true);
                 je.unregisterOperation(it);
             }
         }
@@ -252,13 +252,23 @@ public class JAIExt {
     }
     
     /**
-     * Indicates if the operation is registered as JAI.
+     * Indicates if the operation is registered as JAI-EXT.
      * 
      * @param descriptorName
      * @return
      */
     public static boolean isJAIExtOperation(String descriptorName){
         return getJAIEXT().isJAIExtOp(descriptorName);
+    }
+    
+    /**
+     * Indicates if the operation is registered as JAI.
+     * 
+     * @param descriptorName
+     * @return
+     */
+    public static boolean isJAIAPI(String descriptorName){
+        return getJAIEXT().isJAIAvailableOperation(descriptorName);
     }
 
     private JAIExt(ConcurrentOperationRegistry registry) {
@@ -418,12 +428,16 @@ public class JAIExt {
      * @return
      */
     private List<OperationItem> getItems() {
-        Collection<OperationItem> items = registry.getOperations();
-        List<OperationItem> ops = new ArrayList<OperationItem>(items.size());
-        for (OperationItem item : items) {
-            ops.add(item);
+        Lock readLock = lock.readLock();
+        try {
+            readLock.lock();
+            Collection<OperationItem> items = registry.getOperations();
+            List<OperationItem> ops = new ArrayList<OperationItem>(items.size());
+            ops.addAll(items);
+            return ops;
+        } finally {
+            readLock.unlock();
         }
-        return ops;
     }
 
     /**
@@ -432,18 +446,19 @@ public class JAIExt {
      * @return
      */
     private List<OperationItem> getJAIEXTAvailableOps() {
-        Lock writeLock = lock.writeLock();
+        Lock readLock = lock.readLock();
         try {
-            writeLock.lock();
-            OperationCollection items = registry.getOperationCollection();
-            Set<String> jaiextKeys = registry.getOperationMap(false).keySet();
-            List<OperationItem> ops = new ArrayList<OperationItem>(jaiextKeys.size());
-            for (String key : jaiextKeys) {
-                ops.add(items.get(key));
-            }
+            readLock.lock();
+            //OperationCollection items = registry.getOperationCollection();
+            Map<String, OperationItem> operationMap = registry.getOperationMap(false);
+            List<OperationItem> ops = new ArrayList<OperationItem>(operationMap.size());
+            ops.addAll(operationMap.values());
+            //for (String key : jaiextKeys) {
+                //ops.add(items.get(key));
+            //}
             return ops;
         } finally {
-            writeLock.unlock();
+            readLock.unlock();
         }
     }
     
@@ -453,18 +468,19 @@ public class JAIExt {
      * @return
      */
     private List<OperationItem> getJAIAvailableOps() {
-        Lock writeLock = lock.writeLock();
+        Lock readLock = lock.readLock();
         try {
-            writeLock.lock();
-            OperationCollection items = registry.getOperationCollection();
-            Set<String> jaiKeys = registry.getOperationMap(true).keySet();
-            List<OperationItem> ops = new ArrayList<OperationItem>(jaiKeys.size());
-            for (String key : jaiKeys) {
-                ops.add(items.get(key));
-            }
+            readLock.lock();
+            //OperationCollection items = registry.getOperationCollection();
+            Map<String, OperationItem> operationMap = registry.getOperationMap(true);
+            List<OperationItem> ops = new ArrayList<OperationItem>(operationMap.size());
+            ops.addAll(operationMap.values());
+            //for (String key : jaiKeys) {
+                //ops.add(items.get(key));
+            //}
             return ops;
         } finally {
-            writeLock.unlock();
+            readLock.unlock();
         }
     }
     
@@ -482,24 +498,61 @@ public class JAIExt {
             readLock.unlock();
         }
     }
-    
-    private void unregisterOperation(OperationItem op) {
-        if(op == null){
-            return;
+
+    private boolean isJAIAvailableOperation(String descriptorName) {
+        Lock readLock = lock.readLock();
+        try {
+            readLock.lock();
+            String jaiextName = getJAIExtName(descriptorName);
+            if (!jaiextName.equalsIgnoreCase(descriptorName)) {
+                return true;
+            }
+            List<OperationItem> ops = getJAIAvailableOps();
+            for (OperationItem item : ops) {
+                String vendor = item.getVendor();
+                if ((vendor.equalsIgnoreCase(ConcurrentOperationRegistry.JAI_PRODUCT) || vendor
+                        .equalsIgnoreCase(ConcurrentOperationRegistry.JAI_PRODUCT_NULL))
+                        && item.getName().equalsIgnoreCase(descriptorName)) {
+                    return true;
+                }
+            }
+            return false;
+        } finally {
+            readLock.unlock();
         }
-        Object factory = op.getFactory();
-        OperationDescriptor descriptor = op.getDescriptor();
-        registry.unregisterFactory(RenderedRegistryMode.MODE_NAME, op.getName(), op.getVendor(), factory);
-        registry.unregisterDescriptor(descriptor);
     }
-    
-    private void registerOperation(OperationItem op) {
-        if(op == null){
-            return;
+
+    private void unregisterOperation(OperationItem op) {
+        Lock writeLock = lock.writeLock();
+        try {
+            writeLock.lock();
+            if (op == null) {
+                return;
+            }
+            Object factory = op.getFactory();
+            OperationDescriptor descriptor = op.getDescriptor();
+            registry.unregisterFactory(RenderedRegistryMode.MODE_NAME, op.getName(),
+                    op.getVendor(), factory);
+            registry.unregisterDescriptor(descriptor);
+        } finally {
+            writeLock.unlock();
         }
-        Object factory = op.getFactory();
-        OperationDescriptor descriptor = op.getDescriptor();
-        registry.registerDescriptor(descriptor);
-        registry.registerFactory(RenderedRegistryMode.MODE_NAME, op.getName(), op.getVendor(), factory);
+    }
+
+    private void registerOperation(OperationItem op) {
+        Lock writeLock = lock.writeLock();
+        try {
+            writeLock.lock();
+            if (op == null) {
+                return;
+            }
+            Object factory = op.getFactory();
+            OperationDescriptor descriptor = op.getDescriptor();
+            registry.registerDescriptor(descriptor);
+            registry.registerFactory(RenderedRegistryMode.MODE_NAME, op.getName(), op.getVendor(),
+                    factory);
+        } finally {
+            writeLock.unlock();
+        }
     }
 }
