@@ -490,9 +490,9 @@ public class MosaicOpImage extends OpImage {
 
                 hasNoData[i] = true;
                 imageBeans[i].setSourceNoData(noDataRange);
-                if(noDataRange.getDataType().getDataType()!=dataType){
-                    noDataRange = RangeFactory.convert(noDataRange, dataType);
-                }
+                //if(noDataRange.getDataType().getDataType()!=dataType){
+                    //noDataRange = RangeFactory.convert(noDataRange, dataType);
+                //}
 
                 if (dataType == DataBuffer.TYPE_BYTE) {
                     // selection of the no data range for byte values
