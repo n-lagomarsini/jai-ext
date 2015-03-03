@@ -1086,8 +1086,8 @@ public final class ConcurrentOperationRegistry extends OperationRegistry {
                 boolean registerFactory = factory == null
                         || (currentFactory != null && !currentFactory.getClass().isAssignableFrom(factory.getClass()));
                 if (currentFactory != null && registerFactory) {
-                    registry.unregisterFactory(RenderedRegistryMode.MODE_NAME, operationItem
-                            .getDescriptor().getName(), operationItem.getVendor(), currentFactory);
+                    //registry.unregisterFactory(RenderedRegistryMode.MODE_NAME, operationItem
+                            //.getDescriptor().getName(), operationItem.getVendor(), currentFactory);
                 }
                 registry.unregisterDescriptor(operationItem.getDescriptor());
                 // registering descriptor
@@ -1097,6 +1097,11 @@ public final class ConcurrentOperationRegistry extends OperationRegistry {
                     registry.registerFactory(RenderedRegistryMode.MODE_NAME, changedOp
                             .getDescriptor().getName(), changedOp.getVendor(), changedOp
                             .getCurrentFactory());
+                	//registry.setFactoryPreference(RenderedRegistryMode.MODE_NAME,
+                			//changedOp.getDescriptor().getName(),
+                			//changedOp.getVendor(),
+                			//factory,
+                			//currentFactory);
                 }
             } else {
                 // If the operationItem is null then it is registered
