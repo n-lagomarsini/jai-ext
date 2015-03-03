@@ -353,31 +353,13 @@ public class LookupTable extends LookupTableJAI implements Serializable {
 
     /** This method sets destination no data used for No Data or ROI calculation */
     public void setDestinationNoData(double destinationNoData) {               
-        // Selection of the table data type
-        int dataType = getDataType();
         // Cast of the initial double value to that of the data type
-        switch (dataType) {
-        case DataBuffer.TYPE_BYTE:
             destinationNoDataByte = (byte) ((byte) destinationNoData & 0xff);
-            break;
-        case DataBuffer.TYPE_USHORT:
             destinationNoDataShort = (short) ((short) destinationNoData & 0xffff);
-            break;
-        case DataBuffer.TYPE_SHORT:
             destinationNoDataShort = (short) destinationNoData;
-            break;
-        case DataBuffer.TYPE_INT:
             destinationNoDataInt = (int) destinationNoData;
-            break;
-        case DataBuffer.TYPE_FLOAT:
             destinationNoDataFloat = (float) destinationNoData;
-            break;
-        case DataBuffer.TYPE_DOUBLE:
             destinationNoDataDouble = destinationNoData;
-            break;
-        default:
-            throw new IllegalArgumentException("Wrong data type");
-        }
     }
 
     /** No Data flag is set to true and no data range is taken */
