@@ -107,7 +107,9 @@ public final class ConcurrentOperationRegistry extends OperationRegistry {
             OperationCollection input = new OperationCollection(registry);
             input.createMapFromDescriptors(descriptors);
             // Saving of the all initial operations
-            registry.jaiMap = input.copy().map;
+            Map<String, OperationItem> map = input.copy().filter(JAI_PRODUCT).map;
+            map.put("Null", input.get("Null"));
+            registry.jaiMap = map;
 
             // First load all the REGISTRY_FILEs that are found in
             // the specified class loader.

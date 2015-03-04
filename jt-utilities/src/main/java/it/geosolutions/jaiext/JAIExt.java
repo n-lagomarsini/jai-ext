@@ -22,9 +22,11 @@ import it.geosolutions.jaiext.ConcurrentOperationRegistry.OperationItem;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -44,6 +46,12 @@ import javax.media.jai.registry.RenderedRegistryMode;
  */
 public class JAIExt {
 
+    public static final String OPERATION_CONST_NAME = "operationConst";
+
+    public static final String ALGEBRIC_NAME = "algebric";
+
+    public static final String STATS_NAME = "Stats";
+
     /** The reader/writer lock for this class. */
     private ReadWriteLock lock;
 
@@ -55,7 +63,48 @@ public class JAIExt {
 
     /** {@link Logger} used for Logging any excpetion or warning */
     private static final Logger LOGGER = Logger.getLogger(JAIExt.class.toString());
-
+    
+    /** Set containing the mapping from/to jai/jaiext operation names*/
+    private static final HashMap<String, Set<String>> NAME_MAPPING;
+    
+    static{
+        // Instantiating the map
+        NAME_MAPPING = new HashMap<String, Set<String>>();
+        // Add statistics names
+        Set<String> stats = new TreeSet<String>();
+        stats.add("Extrema");
+        stats.add("Histogram");
+        stats.add("Mean");
+        NAME_MAPPING.put(STATS_NAME, stats);
+        // Add operation Consts names
+        Set<String> opConst = new TreeSet<String>();
+        opConst.add("AddConst");
+        opConst.add("DivideByConst");
+        opConst.add("MultiplyConst");
+        opConst.add("SubtractConst");
+        opConst.add("SubtractFromConst");
+        opConst.add("AndConst");
+        opConst.add("OrConst");
+        opConst.add("XorConst");
+        NAME_MAPPING.put(OPERATION_CONST_NAME, opConst);
+        // Add Algebric names
+        Set<String> algebric = new TreeSet<String>();
+        algebric.add("Add");
+        algebric.add("Divide");
+        algebric.add("Multiply");
+        algebric.add("Subtract");
+        algebric.add("Absolute");
+        algebric.add("And");
+        algebric.add("Or");
+        algebric.add("Xor");
+        algebric.add("Exp");
+        algebric.add("Log");
+        algebric.add("Invert");
+        algebric.add("SubtractFrom");
+        algebric.add("DivideInto");
+        NAME_MAPPING.put(ALGEBRIC_NAME, algebric);
+    }
+ 
     private static final String JAI_EXT_VENDOR = "it.geosolutions.jaiext";
 
     /** Initialization of the {@link JAIExt} instance */
@@ -129,9 +178,9 @@ public class JAIExt {
                 if (!isJAIExtOperation(jaiextName)) {
                     registerJAIEXTDescriptor(jaiextName);
                 }
-            } else if (jaiextName.equalsIgnoreCase(opName) && isJAIExtOperation(opName)) {
+            } else if (jaiextName.equalsIgnoreCase(opName) && isJAIExtOperation(opName) && !NAME_MAPPING.containsKey(jaiextName)) {
                 registerJAIDescriptor(opName);
-            } else if(!jaiextName.equalsIgnoreCase(opName)){
+            } else if(!jaiextName.equalsIgnoreCase(opName) || NAME_MAPPING.containsKey(jaiextName)){
                 OperationItem it = searchForOperation(jaiextName, true);
                 je.unregisterOperation(it);
             }
@@ -209,20 +258,15 @@ public class JAIExt {
      * @return
      */
     public static String getOperationName(String name) {
-        if (isJAIExtOperation("Stats")
-                && (name.equalsIgnoreCase("Extrema") || name.equalsIgnoreCase("Histogram"))) {
-            return "Stats";
-        } else if (isJAIExtOperation("algebric")
-                && (name.equalsIgnoreCase("Add") || name.equalsIgnoreCase("Exp")
-                        || name.equalsIgnoreCase("Invert") || name.equalsIgnoreCase("Log") || name
-                            .equalsIgnoreCase("Multiply"))) {
-            return "algebric";
-        } else if (isJAIExtOperation("operationConst")
-                && (name.equalsIgnoreCase("AddConst") || name.equalsIgnoreCase("DivideByConst")
-                        || name.equalsIgnoreCase("MultiplyConst")
-                        || name.equalsIgnoreCase("SubtractConst") || name
-                            .equalsIgnoreCase("SubtractFromConst"))) {
-            return "operationConst";
+        if (isJAIExtOperation(STATS_NAME)
+                && NAME_MAPPING.get(STATS_NAME).contains(name)) {
+            return STATS_NAME;
+        } else if (isJAIExtOperation(ALGEBRIC_NAME)
+                && NAME_MAPPING.get(ALGEBRIC_NAME).contains(name)) {
+            return ALGEBRIC_NAME;
+        } else if (isJAIExtOperation(OPERATION_CONST_NAME)
+                && NAME_MAPPING.get(OPERATION_CONST_NAME).contains(name)) {
+            return OPERATION_CONST_NAME;
         }
 
         return name;
@@ -235,20 +279,31 @@ public class JAIExt {
      * @return
      */
     public static String getJAIExtName(String name) {
-        if ((name.equalsIgnoreCase("Extrema") || name.equalsIgnoreCase("Histogram"))) {
-            return "Stats";
-        } else if ((name.equalsIgnoreCase("Add") || name.equalsIgnoreCase("Exp")
-                        || name.equalsIgnoreCase("Invert") || name.equalsIgnoreCase("Log") || name
-                            .equalsIgnoreCase("Multiply"))) {
-            return "algebric";
-        } else if ((name.equalsIgnoreCase("AddConst") || name.equalsIgnoreCase("DivideByConst")
-                        || name.equalsIgnoreCase("MultiplyConst")
-                        || name.equalsIgnoreCase("SubtractConst") || name
-                            .equalsIgnoreCase("SubtractFromConst"))) {
-            return "operationConst";
+        if (NAME_MAPPING.get(STATS_NAME).contains(name)) {
+            return STATS_NAME;
+        } else if (NAME_MAPPING.get(ALGEBRIC_NAME).contains(name)) {
+            return ALGEBRIC_NAME;
+        } else if (NAME_MAPPING.get(OPERATION_CONST_NAME).contains(name)) {
+            return OPERATION_CONST_NAME;
         }
 
         return name;
+    }
+    
+    /**
+     * Utility method for substituting the JAIExt operation name with the related JAI one/ones
+     * 
+     * @param name
+     * @return
+     */
+    public static List<String> getJAINames(String name) {
+        List<String> names = new ArrayList<String>();
+        if(NAME_MAPPING.containsKey(name)){
+            names.addAll(NAME_MAPPING.get(name));
+        }else {
+            names.add(name);
+        }
+        return names;
     }
     
     /**
@@ -303,7 +358,7 @@ public class JAIExt {
             if (op != null
                     && op.getResourceBundle(null)
                             .getString(ConcurrentOperationRegistry.VENDOR_NAME)
-                            .equalsIgnoreCase(vendor)) {
+                            .equalsIgnoreCase(vendor) || op == null) {
 
                 // Selection of the OperationItem associated to the old descriptor
                 OperationCollection collection = registry.getOperationCollection();
@@ -313,20 +368,23 @@ public class JAIExt {
                 OperationItem newItem = registry.getOperationMap(!fromJAI).get(descriptorName);
                 // Unregistering of the old operation and registering of the new one
                 if (newItem != null) {
-                    if (oldItem.getCurrentFactory() != null) {
-                        //registry.unregisterFactory(RenderedRegistryMode.MODE_NAME, descriptorName,
-                                //vendor, oldItem.getCurrentFactory());
+                    if(op != null){
+                        if (oldItem != null && oldItem.getCurrentFactory() != null) {
+                            //registry.unregisterFactory(RenderedRegistryMode.MODE_NAME, descriptorName,
+                                    //vendor, oldItem.getCurrentFactory());
+                            if (LOGGER.isLoggable(Level.FINEST)) {
+                                LOGGER.log(Level.FINEST, "Unregistered Factory for the operation: "
+                                        + descriptorName);
+                            }
+                        }
+                        registry.unregisterDescriptor(op);
                         if (LOGGER.isLoggable(Level.FINEST)) {
-                            LOGGER.log(Level.FINEST, "Unregistered Factory for the operation: "
-                                    + descriptorName);
+                            LOGGER.log(Level.FINEST, "Unregistered " + inVendor
+                                    + " descriptor for the operation: " + descriptorName);
                         }
                     }
-                    registry.unregisterDescriptor(op);
 
-                    if (LOGGER.isLoggable(Level.FINEST)) {
-                        LOGGER.log(Level.FINEST, "Unregistered " + inVendor
-                                + " descriptor for the operation: " + descriptorName);
-                    }
+
                     registry.registerDescriptor(newItem.getDescriptor());
 
                     if (LOGGER.isLoggable(Level.FINEST)) {
@@ -377,7 +435,7 @@ public class JAIExt {
             OperationItem item = collection.get(descriptorName);
             // Selection of the old JAI OperationItem.
             OperationItem jaiItem = registry.getOperationMap(true).get(descriptorName);
-            if (item.getVendor().equalsIgnoreCase(ConcurrentOperationRegistry.JAI_PRODUCT)
+            if (item != null && item.getVendor().equalsIgnoreCase(ConcurrentOperationRegistry.JAI_PRODUCT)
                     && jaiItem.getFactory() != null && jaiItem.getMlibFactory() != null) {
                 // Definition of the old and the new factories
                 Object oldFactory = null;
@@ -398,19 +456,28 @@ public class JAIExt {
                     acc2 = " Accelerated";
                 }
                 // Registration step
-                registry.unregisterFactory(RenderedRegistryMode.MODE_NAME, descriptorName,
-                        ConcurrentOperationRegistry.JAI_PRODUCT, oldFactory);
-                if (LOGGER.isLoggable(Level.FINEST)) {
-                    LOGGER.log(Level.FINEST, "Unregistered" + acc1 + " Factory for the operation: "
-                            + descriptorName);
+                List orderedFactoryList = registry.getOrderedFactoryList(RenderedRegistryMode.MODE_NAME, descriptorName,
+                        ConcurrentOperationRegistry.JAI_PRODUCT);
+                if (orderedFactoryList != null && orderedFactoryList.contains(oldFactory) ){
+                    registry.unregisterFactory(RenderedRegistryMode.MODE_NAME, descriptorName,
+                            ConcurrentOperationRegistry.JAI_PRODUCT, oldFactory);
+                    if (LOGGER.isLoggable(Level.FINEST)) {
+                        LOGGER.log(Level.FINEST, "Unregistered" + acc1 + " Factory for the operation: "
+                                + descriptorName);
+                    }
                 }
-                registry.registerFactory(RenderedRegistryMode.MODE_NAME, descriptorName,
-                        ConcurrentOperationRegistry.JAI_PRODUCT, newFactory);
-                
-                if (LOGGER.isLoggable(Level.FINEST)) {
-                    LOGGER.log(Level.FINEST, "Registered" + acc2 + " Factory for the operation: "
-                            + descriptorName);
+                orderedFactoryList = registry.getOrderedFactoryList(RenderedRegistryMode.MODE_NAME, descriptorName,
+                        ConcurrentOperationRegistry.JAI_PRODUCT);
+                if (orderedFactoryList == null || !orderedFactoryList.contains(newFactory) ){
+                    registry.registerFactory(RenderedRegistryMode.MODE_NAME, descriptorName,
+                            ConcurrentOperationRegistry.JAI_PRODUCT, newFactory);
+                    
+                    if (LOGGER.isLoggable(Level.FINEST)) {
+                        LOGGER.log(Level.FINEST, "Registered" + acc2 + " Factory for the operation: "
+                                + descriptorName);
+                    }
                 }
+
             }else{
                 if (LOGGER.isLoggable(Level.INFO)) {
                     LOGGER.log(Level.INFO, "Unable to set acceleration for following operation: " + descriptorName);
@@ -529,10 +596,10 @@ public class JAIExt {
             if (op == null) {
                 return;
             }
-            Object factory = op.getFactory();
+            //Object factory = op.getFactory();
             OperationDescriptor descriptor = op.getDescriptor();
-            registry.unregisterFactory(RenderedRegistryMode.MODE_NAME, op.getName(),
-                    op.getVendor(), factory);
+            //registry.unregisterFactory(RenderedRegistryMode.MODE_NAME, op.getName(),
+                    //op.getVendor(), factory);
             registry.unregisterDescriptor(descriptor);
         } finally {
             writeLock.unlock();
