@@ -677,7 +677,7 @@ public class ScaleBicubicOpImage extends ScaleOpImage {
                                     weightVert = 0;
 
                                     // Vertical sum update
-                                    tempSum = tempData[0] * dataVi[offsetY] + tempData[1]
+                                    sum = tempData[0] * dataVi[offsetY] + tempData[1]
                                             * dataVi[offsetY + 1] + tempData[2]
                                             * dataVi[offsetY + 2] + tempData[3]
                                             * dataVi[offsetY + 3];
